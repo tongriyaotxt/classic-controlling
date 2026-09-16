@@ -38,54 +38,19 @@ def L(zh: str, en: str) -> str:
 
 # ------------------------------------------------------------------ PID（对照组）
 
-class PID:
-    """离散 PID：微分先行（对测量）+ 一阶微分滤波，位置式。
-
-    参数由 Ziegler-Nichols 反应曲线法从 FOPDT 模型 (K, T, L) 整定：
-        Kp = 1.2*T/(K*L),  Ti = 2*L,  Td = 0.5*L
-    """
-
-    def __init__(self, kp: float, ti: float, td: float, dt: float):
-        self.kp, self.ti, self.td, self.dt = float(kp), float(ti), float(td), float(dt)
-        self.integral = 0.0
-        self._y_prev = 0.0
-        self._d_filt = 0.0  # 滤波后的 -dy/dt
-
-    @classmethod
-    def ziegler_nichols(cls, K: float, T: float, L: float, dt: float) -> "PID":
-        """Z-N 反应曲线整定；L 过小（辨识退化）时兜底为 2*dt 并限幅 Kp。"""
-        L_eff = max(float(L), 2.0 * dt)
-        kp = 1.2 * T / (K * L_eff)
-        kp = float(np.clip(kp, 0.01, 20.0))
-        return cls(kp=kp, ti=2.0 * L_eff, td=0.5 * L_eff, dt=dt)
-
-    def reset(self):
-        self.integral = 0.0
-        self._y_prev = 0.0
-        self._d_filt = 0.0
-
-    def step(self, r: float, y: float) -> float:
-        e = r - y
-        self.integral += (self.kp / self.ti) * e * self.dt
-        d_raw = -(y - self._y_prev) / self.dt
-        tf = max(self.td / 10.0, self.dt)  # 微分滤波时间常数 N=10
-        alpha = self.dt / (tf + self.dt)
-        self._d_filt += alpha * (d_raw - self._d_filt)
-        self._y_prev = y
-        return self.kp * e + self.integral + self.kp * self.td * self._d_filt
+from classic_controlling import PID  # noqa: E402  包内实现，此处仅为别名
 
 
 def auto_tune_pid(K: float, T: float, L: float, dt: float):
     """基于辨识模型的 PID 整定（对照组），返回 (PID, 规则名)。
 
-    - L >= 2*dt：经典 Ziegler-Nichols 反应曲线法；
+    - L >= 2*dt：经典 Ziegler-Nichols 反应曲线法（``PID.ziegler_nichols``）；
     - L ≈ 0（Z-N 反应曲线不适用，Kp 会发散）：回退到 IMC-PI
-      （MacGregor 规则），lambda = max(0.2*T, 1.7*L)，极点对消。
+      （MacGregor 规则，``PID.imc_pi``）。
     """
     if L >= 2.0 * dt:
         return PID.ziegler_nichols(K, T, L, dt), "Z-N"
-    lam = max(0.2 * T, 1.7 * L)
-    return PID(kp=T / (K * (lam + L)), ti=T, td=0.0, dt=dt), "IMC-PI"
+    return PID.imc_pi(K, T, L, dt), "IMC-PI"
 
 
 def identify_fopdt(plant, dt: float, u_step: float = 1.0, n_settle: int = 200):

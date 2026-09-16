@@ -1,8 +1,8 @@
 # classic_controlling
 
-**Self-tuning ADRC, vectorized UKF, and dependency-free MPC — classic control algorithms in pure NumPy, with benchmarks.**
+**Self-tuning ADRC, industrial PID (cascade / feedforward / derivative-on-measurement), vectorized UKF, and dependency-free MPC — classic control algorithms in pure NumPy, with benchmarks.**
 
-![tests](https://img.shields.io/badge/pytest-21%20passed-brightgreen)
+![tests](https://img.shields.io/badge/pytest-32%20passed-brightgreen)
 ![python](https://img.shields.io/badge/python-%3E%3D3.9-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -13,6 +13,7 @@
 ## Features
 
 - **Self-tuning ADRC** (`ADRC.auto_tune`) — one step-response experiment → FOPDT identification → bandwidth selection under delay phase-margin/sampling hard-constraints. Steady-state error **0.9% / 3.2% / 1.0%** on the three blind-test plants, zero human parameters. Optional online RLS correction of b0 (experimental, off by default): rate-limited two-timescale updates, [0.3, 3.0]× rails, and automatic rollback-and-freeze if the estimate hugs a rail while tracking stagnates.
+- **Industrial PID** (`PID` / `CascadePID`) — derivative-on-measurement (kills the setpoint-kick: u spike **9.3 → 1.0**), filtered derivative, output limits with back-calculation anti-windup (overshoot **16.0% → 6.3%** under ±1 saturation), additive feedforward (`step(r, y, ff=...)`, ramp-tracking IAE **3.19 → 0.02**), setpoint weighting, and cascade composition (inner-disturbance max deviation **0.12 → 0.006**). Built-in Ziegler-Nichols and IMC-PI tuning rules.
 - **Vectorized UKF** — every sigma-point operation (generation, batch propagation, weighted mean/covariance rebuild) is one NumPy broadcast/einsum, no per-point Python loop: **2.2× / 6.0× / 11.2×** faster than a mathematically equivalent point-loop reference at dim_x = 2 / 8 / 32.
 - **Dependency-free LinearMPC** — condensed QP compiled once, built-in OSQP-style ADMM solver with pre-factored KKT matrix, warm start over (z, s, y) cutting total iterations **1.9×** (3687 → 1935) on a constrained double integrator. No external solver (no OSQP/CVXPY) needed.
 
@@ -20,7 +21,7 @@
 
 ```bash
 pip install classic-controlling        # or: pip install -e . from source
-python -m pytest tests/ -v             # 21 tests
+python -m pytest tests/ -v             # 32 tests
 ```
 
 ### ADRC — 5 lines to a self-tuned loop
@@ -39,6 +40,23 @@ for _ in range(300):
 The full auto-tuning pipeline (step test → FOPDT fit → tracking → b0 adapting to a mid-run gain change), from `examples/demo_autotune.py`:
 
 ![auto_tune process](docs/figures/autotune_process.png)
+
+### PID — the industrial essentials, included
+
+```python
+from classic_controlling import PID, CascadePID
+
+ctl = PID(kp=3.0, ti=0.5, td=0.1, dt=0.01, u_min=-1, u_max=1)  # anti-windup on by default
+u = ctl.step(r=1.0, y=plant.y, ff=model_feedforward)           # feedforward is one kwarg
+
+cascade = CascadePID(outer=PID(1.0, 1.0, 0.0, dt),             # outer output = inner setpoint
+                     inner=PID(5.0, 0.2, 0.0, dt))
+u = cascade.step(r=1.0, y_outer=pos, y_inner=vel)
+```
+
+From `examples/demo_pid_features.py` — anti-windup / derivative-on-measurement / feedforward / cascade, each against its own ablation:
+
+![PID features](docs/figures/pid_features.png)
 
 ### UKF — vectorized sigma points
 
@@ -130,6 +148,7 @@ Honest read: on well-behaved LTI plants a model-tuned PID is faster — ADRC's a
 ```bash
 python examples/demo_adrc_vs_pid.py    # hero comparison + metrics table
 python examples/demo_autotune.py       # auto_tune pipeline end-to-end
+python examples/demo_pid_features.py   # anti-windup / D-on-meas / feedforward / cascade
 python examples/demo_mpc.py            # constrained MPC + warm-start speedup
 python examples/demo_ukf.py            # coordinated-turn tracking
 ```
@@ -142,10 +161,11 @@ All figures are written to `docs/figures/`.
 classic_controlling/      # the package
 ├── adrc.py               # linear ADRC (bandwidth tuning + auto_tune + RLS b0 adaptation)
 ├── autotune.py           # step-response FOPDT identification + automatic bandwidth selection
+├── pid.py                # industrial PID (anti-windup / D-on-measurement / feedforward) + CascadePID
 ├── sim.py                # virtual plants (FOPDT / 2nd-order / nonlinear), reset()/step(u) protocol
 ├── ukf.py                # vectorized UKF
 └── mpc.py                # LinearMPC (condensed QP + built-in ADMM + warm start)
-tests/                    # 21 pytest tests (blind auto-tune assertions, SLSQP cross-check, ...)
+tests/                    # 32 pytest tests (blind auto-tune assertions, SLSQP cross-check, PID ablations, ...)
 benchmarks/bench_ukf.py   # UKF vectorized vs point-loop benchmark
 examples/                 # runnable demos -> docs/figures/*.png
 research/                 # background research notes (Chinese)
@@ -155,6 +175,7 @@ research/                 # background research notes (Chinese)
 
 三个经典控制/估计算法的高质量纯 NumPy 实现：
 
+- **工业 PID**：`PID` 内置微分先行（设定值跳变冲击 9.3 → 1.0）、微分滤波、限幅 + 反算抗饱和（±1 限幅下超调 16.0% → 6.3%）、前馈叠加（斜坡跟踪 IAE 3.19 → 0.02）、设定值权重；`CascadePID` 串级（内环扰动最大偏差 0.12 → 0.006）；自带 Z-N / IMC-PI 整定规则；
 - **自整定 ADRC**：`ADRC.auto_tune(plant, dt)` 一键完成阶跃辨识 → FOPDT 拟合 → 带宽自动选择（时滞相位裕量帽 + 采样硬约束），全程零人工调参；一阶/二阶/非线性三个对象盲测稳态误差 0.9% / 3.2% / 1.0%。在线 RLS 修正 b0 为 experimental 可选项（默认关闭）：限速双时间尺度更新 + [0.3, 3.0]× 护栏 + 贴护栏停滞自动回退冻结；
 - **向量化 UKF**：sigma 点操作全部 NumPy 广播一次完成，无逐点循环，相比等价逐点实现加速 2.2× / 6.0× / 11.2×（dim 2/8/32）；
 - **轻量线性 MPC**：稠密式 QP 编译一次 + 内置 OSQP 风格 ADMM 求解器 + (z, s, y) 热启动（总迭代数减 1.9×），零外部求解器依赖。
@@ -163,7 +184,7 @@ research/                 # background research notes (Chinese)
 
 ```bash
 pip install -e .
-python -m pytest tests/ -v          # 21 项测试
+python -m pytest tests/ -v          # 32 项测试
 python examples/demo_adrc_vs_pid.py # 核心对比演示，出图到 docs/figures/
 ```
 

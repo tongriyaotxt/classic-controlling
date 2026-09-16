@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "classic-controlling"
-version = "0.1.0"
-description = "Self-tuning ADRC, vectorized UKF, and dependency-free linear MPC — classic control algorithms in pure NumPy, with benchmarks"
+version = "0.2.0"
+description = "Self-tuning ADRC, industrial PID (cascade/feedforward/derivative-on-measurement), vectorized UKF, and dependency-free linear MPC — classic control algorithms in pure NumPy, with benchmarks"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"

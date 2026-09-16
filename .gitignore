@@ -26,3 +26,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# 本地发布凭证手册（含账号/凭证路径，不进公开仓库）
+docs/PUBLISHING.md

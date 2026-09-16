@@ -1,0 +1,23 @@
+<!DOCTYPE html><html><head><meta charset='utf-8'></head><body><p>做控制的都懂：PID 三个参数，调起来像玄学。Z-N 法给个大超调，试凑法一下午没了；对象稍微不规矩一点（带点时滞、来点非线性），整定结果直接原地爆炸。</p>
+<p>最近我把经典控制里最&quot;抗造&quot;的思路——ADRC（自抗扰控制）——做成了一个零调参的 Python 库 <b>classic_controlling</b>，今天发出来：</p>
+<pre>from classic_controlling import ADRC
+
+ctl = ADRC.auto_tune(plant, dt=0.05)   # 就这一行：自动阶跃实验→辨识→整定</pre>
+<p><b>没有 Kp/Ki/Kd，没有带宽，没有任何一个需要人来拍的参数。</b> 库自己给对象做一次阶跃实验，拟合 FOPDT 模型，然后在时滞相位裕量和采样率的硬约束下自动选带宽。</p>
+<h2>先看效果</h2>
+<p>【此处插入图：docs/figures/adrc_vs_pid.png】</p>
+<p>上图是三个对象上的盲测对比（t=20s 处加阶跃负载扰动），PID 用的是<b>相同的阶跃实验数据</b>按 Z-N/IMC 规则整定的——也就是说 PID 已经占尽了&quot;知道模型&quot;的便宜：</p>
+<ul><li><b>一阶对象</b>：两者都稳，PID 更快（模型准嘛，应该的）；</li><li><b>二阶欠阻尼</b>：PID 6.7% 超调，ADRC 零超调；</li><li><b>非线性、开环不稳定对象</b>（ÿ = -ẏ + u + 0.5y²）：Z-N 整定的 PID 直接发散成增幅振荡，<b>超调 757%，扰动恢复时间 ∞</b>；而零调参的 ADRC 稳住锁定，稳态误差 1.03%。</li></ul>
+<p>三个对象的盲测稳态误差：<b>0.89% / 3.21% / 1.03%</b>，全程零人工干预。</p>
+<h2>诚实的短板</h2>
+<p>不是银弹。在规矩的 LTI 对象上，模型整定的 PID 响应<b>更快</b>——ADRC 的自动带宽是用速度换保证：它的相位裕量帽是按实测发散边界校准的，宁可慢，绝不振。所以这玩意儿的适用场景很明确：</p>
+<ul><li>对象模型不清楚 / 懒得建模；</li><li>对象有非线性、时变、不稳定，PID 整定容易翻车；</li><li>产线上一百个回路，不想一个个拧参数。</li></ul>
+<h2>库里还有什么</h2>
+<ul><li><b>向量化 UKF</b>：sigma 点的生成/传播/加权统计全部 NumPy 广播一次完成，无逐点 Python 循环，相比数学上等价的逐点实现加速 <b>2.2× / 6.0× / 11.2×</b>（维度 2/8/32，维度越高赚越多）；</li><li><b>零依赖线性 MPC</b>：QP 一次编译 + 内置 OSQP 风格 ADMM 求解器 + (z,s,y) 热启动（总迭代数 −47%），不需要装任何外部求解器。</li></ul>
+<p>全部纯 NumPy/SciPy，MIT 协议，21 个测试全绿，所有性能数字都是真实跑出来的（benchmark 脚本就在仓库里，欢迎复现打脸）。</p>
+<h2>安装</h2>
+<pre>pip install classic-controlling</pre>
+<p>GitHub 仓库（求 star / issue / PR）：<b>github.com/tongriyaotxt/classic-controlling</b></p>
+<p>四个可运行的 demo 脚本，跑一遍自己出图：<code>examples/demo_adrc_vs_pid.py</code> 就是上面那张对比图。</p>
+<hr>
+<p>写这个库的初衷很简单：经典控制算法值得一份配得上 2026 年的实现。ADRC 的理论二十多年前就有了，但&quot;零调参&quot;这件事在工程上一直没被真正做掉——带宽规则里的采样帽和相位裕量帽，都是拿实测发散边界换来的。希望能帮到同样被调参折磨过的朋友。</p></body></html>
