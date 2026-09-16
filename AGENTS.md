@@ -2,12 +2,12 @@
 
 > 本文件给下次会话的 agent 看：**开会话后请先读这里，主动向用户弹出下方「待办二选一」的提问**，再继续工作。
 
-## ⏰ 下次开会话时：先问用户这两件事
+## ⏰ 下次开会话时：只剩这一件事
 
-发布前的最后两步（都需要用户本人凭证/授权，agent 不能独立完成）：
+发布前最后一步（发布帖可直接代写，无需凭证）：
 
 1. ~~GitHub 建库并 push~~ —— ✅ 已完成（2026-09-16）：https://github.com/tongriyaotxt/classic-controlling （public，main 分支，topics 已设）
-2. **PyPI 发包** —— `python -m build && twine upload dist/*`，需要用户的 PyPI token
+2. ~~PyPI 发包~~ —— ✅ 已完成（2026-09-16）：https://pypi.org/project/classic-controlling/0.1.0/ （pip install 实测通过）
 3. **发布帖草稿** —— 知乎中文版（主打"零调参"+ 非线性发散对比图 docs/figures/adrc_vs_pid.png）+ Reddit r/ControlTheory 英文版（主打盲测表）；agent 可直接代写草稿
 
 ## 项目是什么
@@ -39,3 +39,8 @@
 Windows + bash(Git Bash)、Python 3.13.5、numpy 2.3.3、scipy 1.16.3、matplotlib 3.10.7、pytest 9.1.1，均已装好；包已 `pip install -e .`。
 
 **网络注意**：本机 github.com:443（HTTPS/git over https）不通，但 api.github.com 和 SSH 正常。git 推送必须走 SSH（remote 已配 `git@github.com:...`，~/.ssh/config 走 ssh.github.com:443）；gh CLI 已登录 tongriyaotxt（repo scope）可正常用。git 身份已在本仓库 local 配置（田晓潼 <tongriyao@qq.com>）。
+
+**PyPI 凭证（本机代管，均在家目录、不进仓库）**：
+- `~/.pypi_api_token` —— 账号级 API token（classic-controlling-upload），发新版本用：`python -m build && python -m twine upload dist/* -u __token__ -p "$(cat ~/.pypi_api_token)"`
+- `~/.pypi_totp_secret` —— 2FA TOTP 密钥（用户选择本地代管而非手机）。登录 pypi.org 需要 6 位码时用 Python 现算（base32+HMAC-SHA1，30s 窗）。PyPI 账号 tongriyaotxt / tongriyao@qq.com，密码只有用户知道
+- 注意：screen-use 的 click_scaled 用的是**最近一次**截图的 scale；do_actions 返回的截图是 scale=2.0，手动 screenshot(max_size=800) 是 3.2，混用会点偏。表单操作每步后截图确认再点下一个
