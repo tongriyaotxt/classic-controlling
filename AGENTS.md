@@ -7,8 +7,8 @@
 发布前最后一步（发布帖可直接代写，无需凭证）：
 
 1. ~~GitHub 建库并 push~~ —— ✅ 已完成（2026-09-16）：https://github.com/tongriyaotxt/classic-controlling （public，main 分支，topics 已设）
-2. ~~PyPI 发包~~ —— ✅ 已完成（2026-09-16）：https://pypi.org/project/classic-controlling/0.1.0/ （pip install 实测通过）
-3. **发布帖** —— 知乎中文版：✅ 已发布（2026-09-16，GUI 自动化填入+用户确认发布，草稿存档 docs/posts/zhihu_post.md）；Reddit r/ControlTheory 英文版：✍️ 草稿已写（docs/posts/reddit_post.md，署名 tongriyao (田晓潼)，主打盲测表），**本机网络不通 reddit.com（curl 超时），无法代发，需用户自行科学上网后复制发布**
+2. ~~PyPI 发包~~ —— ✅ 已完成（0.1.0 + 0.2.0，2026-09-16）：https://pypi.org/project/classic-controlling/ （pip install 实测通过）
+3. **发布帖** —— 知乎中文版：✅ 已发布（2026-09-16，GUI 自动化填入+用户确认发布，草稿存档 docs/posts/zhihu_post.md）；Reddit r/ControlTheory 英文版：✍️ 草稿已写（docs/posts/reddit_post.md，署名 tongriyao (田晓潼)，主打盲测表），**用户没有 Reddit 账号且本机网络不通 reddit.com（curl 超时），无法代发，搁置中**
 
 ## 项目是什么
 
@@ -20,7 +20,7 @@
 - `examples/` + `docs/figures/` —— 5 个 demo 脚本和 5 张对比图（README 已嵌入；demo_pid_features.py 为 PID 四大件消融对比）
 - `research/` —— 前期调研报告（第一性原理框架 + 三个领域的优化机会调研）
 - README.md 双语、MIT LICENSE、pyproject.toml（name=classic-controlling）已就绪，wheel 构建验证过
-- 当前版本 0.2.0（0.1.0 已发 PyPI；0.2.0 新增工业 PID 家族，**尚未发布到 PyPI、未 push**）
+- 当前版本 **0.2.0**（✅ 2026-09-16 已发 PyPI + 已 push；新增工业 PID 家族，pip install 实测通过）
 
 ## 质量门槛（改代码必须遵守）
 
